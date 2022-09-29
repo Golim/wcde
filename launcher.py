@@ -62,10 +62,7 @@ if __name__ == '__main__':
         processes = {}
 
         for site in sites:
-            try:                
-                if site != '' and site in tested and not args.testall:
-                    continue
-                
+            try:
                 first = True # Execute the loop the first time regardless
                 # Loop until we have less than MAX processes running
                 while len(processes) >= MAX or first:
@@ -83,6 +80,9 @@ if __name__ == '__main__':
                                     json.dump(tested, f)
                             break
                     sleep(1)
+
+                if site in tested and not args.testall:
+                    continue
 
                 # When we have less than MAX processes running, launch a new one
                 if site != '' and site not in tested:

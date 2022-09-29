@@ -71,9 +71,25 @@ BLACKLISTED_DOMAINS = [
 ]
 
 # Python requests browser with the user agent
-class browser:
-    def __init__(self):
-        self.session = requests.Session()
+class Browser:
+    def __init__(self, cookies=None):
+        if cookies:
+            self.session = requests.Session()
+
+            cookie_jar = requests.cookies.RequestsCookieJar()
+            for cookie in cookies:
+                cookie_jar.set(
+                    cookie['name'],
+                    cookie['value'],
+                    domain=(cookie['domain'] if 'domain' in cookie else None),
+                    path=(cookie['path'] if 'path' in cookie else None),
+                    expires=(cookie['expires'] if 'expires' in cookie else None),
+                    secure=(cookie['secure'] if 'secure' in cookie else None),
+                    rest={'HttpOnly': (cookie['httpOnly'] if 'httpOnly' in cookie else None)},
+                )
+            self.session.cookies = cookie_jar
+        else:
+            self.session = requests.Session()
         self.session.headers.update({'User-Agent': USER_AGENT})
     def get(self, url, **kwargs):
         if 'referrer' in kwargs:
@@ -451,6 +467,9 @@ if __name__ == '__main__':
     parser.add_argument('-t', '--target',
         help='Target website', required=True)
 
+    parser.add_argument('-c', '--cookie',
+        help='Cookies JSON file to use for the requests')
+
     parser.add_argument('-m', '--max',      default=MAX,
         help=f'Maximum number of URLs to test for each domain/subdomain (default: {MAX})')
 
@@ -467,6 +486,12 @@ if __name__ == '__main__':
 
     if args.debug:
         DEBUG = True
+
+    if args.cookie:
+        cookies_file_name = args.cookie
+
+        with open(cookies_file_name, 'r') as f:
+            cookies = json.load(f)
 
     MODES = {
         'PATH_PARAMETER'    : '/',
@@ -493,6 +518,8 @@ if __name__ == '__main__':
 
     random.seed(42)
 
+    statistics['site'] = SITE
+
     log('Started testing for unauthenticated WCD')
 
     # Load the dictionaries from the files if they exist
@@ -505,8 +532,12 @@ if __name__ == '__main__':
     if not should_continue():
         sys.exit(0)
 
-    victim_browser   = browser()
-    attacker_browser = browser()
+    if args.cookie:
+        log('Using provided cookies to create the victim\'s session.')
+        victim_browser   = Browser(cookies=cookies)
+    else:
+        victim_browser   = Browser()
+    attacker_browser = Browser()
 
     while should_continue():
         try:
@@ -575,9 +606,10 @@ if __name__ == '__main__':
             break
         except (SSLError, NewConnectionError, MaxRetryError, ConnectionError,
                 ReadTimeoutError, ReadTimeout, TooManyRedirects, ChunkedEncodingError, InvalidHeader):
-            debug(f'[Error] {url}')
+            debug(f'{url}')
             pass
-        except:
+        except Exception as e:
+            log(f'ERROR: {url} -> {e}')
             debug(traceback.format_exc())
 
     # Save dictionaries to files

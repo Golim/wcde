@@ -22,13 +22,27 @@ usage: launcher.py -s sites.txt
 
 For more information about the options, please see the help page.
 
-### Setup
+### DE with Authentication
+
+Requires an account to be manually created on the website so that the attack URL is requested with valid authentication cookies, simulating a logged-in victim clicking on the malicious link.
+
+The JSON cookies file contains a list of cookies and can be generated using the browser extension Cookie-Editor for [Firefox](https://addons.mozilla.org/it/firefox/addon/cookie-editor/) or [Chrome](https://chrome.google.com/webstore/detail/cookie-editor/hlkenndednhfkekhgcdicdfddnkalmdm).
+
+```help
+usage: wcde.py -t example.com -c example.com-cookies.json
+```
+
+## Setup
 
 ```bash
 pip install -r requirements.txt
 ```
 
 ## Screenshots
+
+DE testing a vulnerable target with authentication.
+
+![Screenshot](img/screenshot.png)
 
 ## Notice
 
