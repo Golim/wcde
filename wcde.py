@@ -44,6 +44,7 @@ SITE  = ''
 MODES = {}
 MAX   = 50 # Default maximum number of URLs to visit for each domain
 MAX_DOMAINS = 10 # Maximum number of subdomains to crawl
+EXTENSIONS = ['.css']
 LOGS  = 'logs'
 STATS = 'stats'
 HTML  = 'html'
@@ -283,7 +284,7 @@ def should_continue():
 # ============================== WCD functions ================================
 # =============================================================================
 
-def generate_attack_url(url, mode):
+def generate_attack_url(url, mode, extension='.css'):
     '''
     Generate the attack URL including the
     desired path confusion technique in
@@ -303,15 +304,15 @@ def generate_attack_url(url, mode):
     if mode == 'PATH_PARAMETER':
         if not path.endswith('/'):
             path += encoded_character
-        path += f'{random_string}.css'
+        path += f'{random_string}{extension}'
 
     # Encoded question mark ? is placed before the query string
     elif mode == 'ENCODED_QUESTION':
-        path += f'{encoded_character}{query}{random_string}.css'
+        path += f'{encoded_character}{query}{random_string}{extension}'
         query = ''
 
     else:
-        path += f'{encoded_character}{random_string}.css'
+        path += f'{encoded_character}{random_string}{extension}'
 
     return urlunparse(
         (parsed_url.scheme, parsed_url.netloc,
@@ -476,6 +477,13 @@ if __name__ == '__main__':
     parser.add_argument('-d', '--domains',  default=MAX_DOMAINS,
         help=f'Maximum number of domains/subdomains to test(default: {MAX_DOMAINS})')
 
+    parser.add_argument('-e', '--extensions', default=EXTENSIONS,
+        help=f'Extension(s) to use when crafting the attack URLs (default: {EXTENSIONS[0]}). ' + \
+            f'Use commas to separate multiple extensions')
+
+    parser.add_argument('-p', '--path-confusion',
+        help='JSON file containing the path confusion techniques to use (key-value: name-character)')
+
     parser.add_argument('-D', '--debug',    action='store_true',
         help='Enable debug mode')
 
@@ -493,21 +501,36 @@ if __name__ == '__main__':
         with open(cookies_file_name, 'r') as f:
             cookies = json.load(f)
 
-    MODES = {
-        'PATH_PARAMETER'    : '/',
-        'ENCODED_SEMICOLON' : encode(';'),    # %3B
-        'ENCODED_QUESTION'  : encode('?'),    # %3F
-        'ENCODED_NEWLINE'   : encode('\n'),   # %0A
-        'ENCODED_SHARP'     : encode('#'),    # %23
-        'ENCODED_SLASH'     : encode('/'),    # %2F
-        # 'ENCODED_NULL'      : encode('\x00'), # %00
-        'DOUBLE_ENCODED_SEMICOLON': encode('%3B'), # %25%33%42
-        'DOUBLE_ENCODED_QUESTION':  encode('%3F'), # %25%33%46
-        'DOUBLE_ENCODED_NEWLINE':   encode('%0A'), # %25%30%41
-        'DOUBLE_ENCODED_SHARP':     encode('%23'), # %25%32%33
-        'DOUBLE_ENCODED_SLASH':     encode('%2F'), # %25%32%46
-        'DOUBLE_ENCODED_NULL':      encode('%00'), # %25%30%30
-    }
+    if args.extensions:
+        EXTENSIONS = []
+        for extension in args.extensions.split(','):
+            extension = extension.strip()
+            EXTENSIONS.append(extension if extension.startswith('.') else '.' + extension)
+
+    if args.path_confusion:
+        path_confusion_file_name = args.path_confusion
+
+        with open(path_confusion_file_name, 'r') as f:
+            path_confusion = json.load(f)
+        for name in path_confusion:
+            MODES[name.strip()] = path_confusion[name].strip()
+    else:
+        # Default path confusion techniques
+        MODES = {
+            'PATH_PARAMETER'    : '/',
+            'ENCODED_SEMICOLON' : encode(';'),    # %3B
+            'ENCODED_QUESTION'  : encode('?'),    # %3F
+            'ENCODED_NEWLINE'   : encode('\n'),   # %0A
+            'ENCODED_SHARP'     : encode('#'),    # %23
+            'ENCODED_SLASH'     : encode('/'),    # %2F
+            # 'ENCODED_NULL'      : encode('\x00'), # %00
+            'DOUBLE_ENCODED_SEMICOLON': encode('%3B'), # %25%33%42
+            'DOUBLE_ENCODED_QUESTION':  encode('%3F'), # %25%33%46
+            'DOUBLE_ENCODED_NEWLINE':   encode('%0A'), # %25%30%41
+            'DOUBLE_ENCODED_SHARP':     encode('%23'), # %25%32%33
+            'DOUBLE_ENCODED_SLASH':     encode('%2F'), # %25%32%46
+            'DOUBLE_ENCODED_NULL':      encode('%00'), # %25%30%30
+        }
 
     if not os.path.exists(LOGS):
         os.mkdir(LOGS)
@@ -564,40 +587,41 @@ if __name__ == '__main__':
             if not identicality_checks(victim_response.text, attacker_response.text):
                 statistics['diff'] = True
 
-                for mode in MODES:
-                    url1 = generate_attack_url(url, mode)
-                    url2 = generate_attack_url(url, mode)
+                for extension in EXTENSIONS:
+                    for mode in MODES:
+                        url1 = generate_attack_url(url, mode, extension)
+                        url2 = generate_attack_url(url, mode, extension)
 
-                    victim_response =   victim_browser.get(url1, referrer=url)
-                    test_response   = attacker_browser.get(url2, referrer=url)
+                        victim_response =   victim_browser.get(url1, referrer=url)
+                        test_response   = attacker_browser.get(url2, referrer=url)
 
-                    if not identicality_checks(victim_response.text, test_response.text) and\
-                            cache_headers_heuristics(victim_response.headers) == 'MISS':
-                        attacker_response = attacker_browser.get(url1, referrer=url)
+                        if not identicality_checks(victim_response.text, test_response.text) and\
+                                cache_headers_heuristics(victim_response.headers) == 'MISS':
+                            attacker_response = attacker_browser.get(url1, referrer=url)
 
-                        #output[mode]['url'] = url1
-                        if identicality_checks(victim_response.text, attacker_response.text) and\
-                                cache_headers_heuristics(attacker_response.headers) == 'HIT':
-                            statistics['vulnerable'] = True
+                            #output[mode]['url'] = url1
+                            if identicality_checks(victim_response.text, attacker_response.text) and\
+                                    cache_headers_heuristics(attacker_response.headers) == 'HIT':
+                                statistics['vulnerable'] = True
 
-                            # Dump differences if the site is vulnerable
-                            diff = diff_lines(victim_response.text, test_response.text)
-                            with open(f'{HTML}/{SITE}.diff.txt', 'a') as f:
-                                print(f'== < {url1}', file=f)
-                                print(f'== > {url2}', file=f)
-                                print(diff, file=f)
+                                # Dump differences if the site is vulnerable
+                                diff = diff_lines(victim_response.text, test_response.text)
+                                with open(f'{HTML}/{SITE}.diff.txt', 'a') as f:
+                                    print(f'== < {url1}', file=f)
+                                    print(f'== > {url2}', file=f)
+                                    print(diff, file=f)
 
-                            add_to_visited(url) # Mark the URL as visited if it is vulnerable
-                            print(f'[Warning] {SITE} vulnerable {mode}: {bcolors.FAIL}{url1}' +
-                                f'{bcolors.ENDC} code {attacker_response.status_code}', flush=True)
+                                add_to_visited(url) # Mark the URL as visited if it is vulnerable
+                                print(f'[Warning] {SITE} vulnerable {mode}: {bcolors.FAIL}{url1}' +
+                                    f'{bcolors.ENDC} code {attacker_response.status_code}', flush=True)
 
-                            if not mode in statistics['modes']:
-                                statistics['modes'].append(mode)
-                            if not attacker_response.status_code in statistics['codes']:
-                                statistics['codes'].append(attacker_response.status_code)
-                            if not mode in statistics['vulnerabilities']:
-                                statistics['vulnerabilities'][mode] = []
-                            statistics['vulnerabilities'][mode].append([url, url1, attacker_response.status_code])
+                                if not mode in statistics['modes']:
+                                    statistics['modes'].append(mode)
+                                if not attacker_response.status_code in statistics['codes']:
+                                    statistics['codes'].append(attacker_response.status_code)
+                                if not mode in statistics['vulnerabilities']:
+                                    statistics['vulnerabilities'][mode] = []
+                                statistics['vulnerabilities'][mode].append([url, url1, attacker_response.status_code])
 
             add_to_visited(url)
             # time.sleep(2) # Wait x seconds between two tests to limit the stress on the server

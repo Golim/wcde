@@ -32,6 +32,25 @@ The JSON cookies file contains a list of cookies and can be generated using the 
 usage: wcde.py -t example.com -c example.com-cookies.json
 ```
 
+### Adding more Path Confusion Techniques
+
+The `--path-confusion` option allows adding more path confusion techniques from a JSON file structured as follows:
+
+```json
+{
+  "EXAMPLE_ONE": "%2E%2E",
+  "EXAMPLE_TWO": "%2E%2E%3F%2E%2E"
+}
+```
+
+### Using different file extensions
+
+The `--extensions` option allows adding more file extensions separated by commas.
+
+```bash
+usage: wcde.py -t example.com --extensions ".pdf, .png, .jpg, .js, .css"
+```
+
 ## Setup
 
 ```bash
