@@ -477,7 +477,7 @@ if __name__ == '__main__':
     parser.add_argument('-d', '--domains',  default=MAX_DOMAINS,
         help=f'Maximum number of domains/subdomains to test(default: {MAX_DOMAINS})')
 
-    parser.add_argument('-e', '--extensions', default=EXTENSIONS,
+    parser.add_argument('-e', '--extensions', default=EXTENSIONS[0],
         help=f'Extension(s) to use when crafting the attack URLs (default: {EXTENSIONS[0]}). ' + \
             f'Use commas to separate multiple extensions')
 
