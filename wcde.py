@@ -478,8 +478,12 @@ if __name__ == '__main__':
         help=f'Maximum number of domains/subdomains to test(default: {MAX_DOMAINS})')
 
     parser.add_argument('-e', '--extensions', default=EXTENSIONS[0],
-        help=f'Extension(s) to use when crafting the attack URLs (default: {EXTENSIONS[0]}). ' + \
-            f'Use commas to separate multiple extensions')
+        help=f'Extension(s) to use when crafting the attack URLs (default: {EXTENSIONS[0]})' + \
+            f'(use commas to separate multiple extensions).')
+    
+    parser.add_argument('-x', '--exclude',    default='',
+        help='Exclude URLs containing the specified regex(es) ' + \
+            f'(use commas to separate multiple regexes).')
 
     parser.add_argument('-p', '--path-confusion',
         help='JSON file containing the path confusion techniques to use (key-value: name-character)')
@@ -571,6 +575,10 @@ if __name__ == '__main__':
 
             if is_visited(url):
                 continue
+
+            if args.exclude:
+                if any(re.search(regex.strip(), url) for regex in args.exclude.split(',')):
+                    continue
 
             parsed = urlparse(url)
             if any(parsed.path.endswith(ext) for ext in EXCLUDED_EXTENSIONS):
