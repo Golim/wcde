@@ -30,11 +30,18 @@ def log(msg, file=sys.stdout):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(prog='launcher.py', description='Launch the crawler on a list of sites')
 
-    parser.add_argument('-s', '--sites',                        help='Sites list', required=True)
-    parser.add_argument('-m', '--max',        default=MAX,      help=f'Maximum number of sites to test concurrently (default: {MAX})')
-    parser.add_argument('-t', '--testall',    default=False,    help='Test also already tested sites', action='store_true')
-    parser.add_argument('-c', '--crawler',    default=crawler,  help='Alternative crawler script name to launch')
-    parser.add_argument('-d', '--debug',      default=DEBUG,    action='store_true')
+    parser.add_argument('-s', '--sites',
+        help='Sites list', required=True)
+    parser.add_argument('-m', '--max',        default=MAX,
+        help=f'Maximum number of sites to test concurrently (default: {MAX})')
+    parser.add_argument('-a', '--arguments',  default='',
+        help='Additional arguments to pass to the crawler (use with = sign: -a="--arg1 --arg2")')
+    parser.add_argument('-t', '--testall',    default=False,
+        help='Test also already tested sites', action='store_true')
+    parser.add_argument('-c', '--crawler',    default=crawler,
+        help='Alternative crawler script name to launch')
+    parser.add_argument('-d', '--debug',      default=DEBUG, action='store_true',
+        help='Enable debug mode')
 
     args = parser.parse_args()
 
@@ -45,7 +52,6 @@ if __name__ == '__main__':
     if not args.testall and os.path.exists(f'logs/tested.json'):
         with open(f'logs/tested.json', 'r') as f:
             tested = json.load(f)
-
 
     if len(tested) > 0:
         random.shuffle(tested)
@@ -86,7 +92,7 @@ if __name__ == '__main__':
 
                 # When we have less than MAX processes running, launch a new one
                 if site != '' and site not in tested:
-                    cmd  = f'python3 {args.crawler} -t {site}'
+                    cmd  = f'python3 {args.crawler} -t {site} {args.arguments}'
                     log(f'Testing {site}')
                     try:
                         p = subprocess.Popen(shlex.split(cmd))

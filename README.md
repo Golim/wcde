@@ -1,6 +1,6 @@
 # Web Cache Deception Escalates
 
-Python implementation of the Web Cache Deception detection methodology presented in the paper "Web Cache Deception Escalates!" published at USENIX Security '22: [Web Cache Deception Escalates](https://www.usenix.org/conference/usenixsecurity22/presentation/mirheidari).
+Python implementation of the Web Cache Deception detection methodology presented in the paper "Web Cache Deception Escalates!" published at USENIX Security '22: [Web Cache Deception Escalates!](https://www.usenix.org/conference/usenixsecurity22/presentation/mirheidari).
 
 Detect WCD vulnerabilities in websites in a black-box manner.
 
