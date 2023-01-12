@@ -94,11 +94,11 @@ class Browser:
         self.session.headers.update({'User-Agent': USER_AGENT})
     def get(self, url, **kwargs):
         if 'referrer' in kwargs:
-            self.session.headers.update({'Referer': kwargs['referrer']})
+            self.session.headers.update({'Referer': kwargs['referrer'].encode('utf-8')})
         else:
             self.session.headers.pop('Referer', None)
         kwargs.pop('referrer', None)
-        return self.session.get(url, **kwargs)
+        return self.session.get(url.encode('utf-8'), **kwargs)
 
 # Dictionaries where the key is the domain and the value is a list of URLs
 queue = {}
@@ -637,8 +637,8 @@ if __name__ == '__main__':
         except KeyboardInterrupt:
             break
         except (SSLError, NewConnectionError, MaxRetryError, ConnectionError,
-                ReadTimeoutError, ReadTimeout, TooManyRedirects, ChunkedEncodingError, InvalidHeader):
-            debug(f'{url}')
+                ReadTimeoutError, ReadTimeout, TooManyRedirects, ChunkedEncodingError, InvalidHeader) as e:
+            debug(f'ERROR: {url} -> {e}')
             pass
         except Exception as e:
             log(f'ERROR: {url} -> {e}')
