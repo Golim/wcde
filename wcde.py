@@ -132,7 +132,7 @@ def get_template_url(url):
     Everything else is removed.
     """
     parsed = urlparse(url)
-    return urlunparse(('', parsed.netloc, re.sub('\d+', '', parsed.path), '', '', ''))
+    return urlunparse(('', parsed.netloc, re.sub(r'\d+', '', parsed.path), '', '', ''))
 
 def get_domain_name(url):
     """
@@ -477,6 +477,9 @@ if __name__ == '__main__':
     parser.add_argument('-d', '--domains',  default=MAX_DOMAINS,
         help=f'Maximum number of domains/subdomains to test(default: {MAX_DOMAINS})')
 
+    parser.add_argument('-r', '--retest',   action='store_true',
+        help='Retest the URLs that have already been tested. Warning: this will overwrite the previous log files!')
+
     parser.add_argument('-e', '--extensions', default=EXTENSIONS[0],
         help=f'Extension(s) to use when crafting the attack URLs (default: {EXTENSIONS[0]})' + \
             f'(use commas to separate multiple extensions).')
@@ -549,8 +552,14 @@ if __name__ == '__main__':
 
     log('Started testing for unauthenticated WCD')
 
-    # Load the dictionaries from the files if they exist
-    get_dictionaries()
+    if not args.retest:
+        # Load the dictionaries from the files if they exist
+        get_dictionaries()
+    else:
+        response = input(f'{bcolors.WARNING}This will overwrite the previous log files!{bcolors.ENDC}\nAre you sure you want to retest {SITE}? (y/N) ')
+        if response.lower() != 'y':
+            sys.exit(0)
+        log('Retesting the URLs that have already been tested.')
 
     for scheme in ['http', 'https']:
         add_to_queue(f'{scheme}://{SITE}')
