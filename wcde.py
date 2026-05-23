@@ -466,7 +466,10 @@ if __name__ == '__main__':
                     'Web Cache Deception vulnerabilities in a target website')
 
     parser.add_argument('-t', '--target',
-        help='Target website', required=True)
+        help='Target website')
+
+    parser.add_argument('-u', '--url',
+        help='URL to test (overrides the crawling phase, useful for testing a single URL)')
 
     parser.add_argument('-c', '--cookie',
         help='Cookies JSON file to use for the requests')
@@ -496,8 +499,14 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    SITE    = args.target.strip()
-    MAX   = int(args.max)
+    if args.target:
+        SITE    = args.target.strip()
+        MAX   = int(args.max)
+    elif args.url:
+        SITE    = get_domain(args.url.strip())
+        MAX   = 1
+    else:
+        parser.error('the following arguments are required: -t/--target or -u/--url')
 
     if args.debug:
         DEBUG = True
@@ -561,9 +570,12 @@ if __name__ == '__main__':
             sys.exit(0)
         log('Retesting the URLs that have already been tested.')
 
-    for scheme in ['http', 'https']:
-        add_to_queue(f'{scheme}://{SITE}')
-        add_to_queue(f'{scheme}://www.{SITE}')
+    if args.url:
+        add_to_queue(args.url.strip())
+    else:
+        for scheme in ['http', 'https']:
+            add_to_queue(f'{scheme}://{SITE}')
+            add_to_queue(f'{scheme}://www.{SITE}')
 
     if not should_continue():
         sys.exit(0)
@@ -597,9 +609,10 @@ if __name__ == '__main__':
             victim_response   =   victim_browser.get(url)
             attacker_response = attacker_browser.get(url)
 
-            links = get_links(victim_response.url, victim_response.text)
-            for link in links:
-                add_to_queue(link)
+            if not args.url:
+                links = get_links(victim_response.url, victim_response.text)
+                for link in links:
+                    add_to_queue(link)
 
             if not identicality_checks(victim_response.text, attacker_response.text):
                 statistics['diff'] = True
